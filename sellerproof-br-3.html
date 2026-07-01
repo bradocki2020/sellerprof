@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SellerProof BR · Vídeo-prova de embalagem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#151109;
+    --ink-2:#201a10;
+    --kraft:#c9a876;
+    --kraft-dim:#8a7550;
+    --tape:#d4a73a;
+    --tape-dark:#a8811f;
+    --seal:#b8382c;
+    --seal-dark:#8c2a20;
+    --paper:#f2e9d5;
+    --paper-dim:#c9bea3;
+    --ok:#5c8a52;
+    --radius:14px;
+    --radius-sm:8px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .shell{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(ellipse at top, rgba(212,167,58,0.06), transparent 60%),
+      var(--ink);
+    position:relative;
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    padding:14px 16px 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid rgba(201,168,118,0.18);
+    background:var(--ink-2);
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:34px;height:34px;border-radius:50%;
+    border:2px solid var(--seal);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--seal);
+    font-family:'Archivo Black',sans-serif;
+    font-size:11px;
+    transform:rotate(-8deg);
+    flex-shrink:0;
+  }
+  .brand-name{font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:0.02em;}
+  .brand-sub{font-size:10px;color:var(--paper-dim);letter-spacing:0.08em;text-transform:uppercase;margin-top:1px;}
+  .storage-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--paper-dim);
+    text-align:right;
+    line-height:1.3;
+  }
+
+  /* ---------- NAV ---------- */
+  nav{
+    display:flex;
+    background:var(--ink-2);
+    border-bottom:1px solid rgba(201,168,118,0.18);
+  }
+  nav button{
+    flex:1;
+    padding:12px 0;
+    background:none;border:none;
+    color:var(--paper-dim);
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.03em;
+    cursor:pointer;
+    position:relative;
+    text-transform:uppercase;
+  }
+  nav button.active{color:var(--tape);}
+  nav button.active::after{
+    content:"";
+    position:absolute;bottom:-1px;left:20%;right:20%;height:2px;
+    background:var(--tape);
+  }
+
+  main{flex:1;display:flex;flex-direction:column;min-height:0;}
+  section{display:none;flex:1;flex-direction:column;min-height:0;}
+  section.active{display:flex;}
+
+  /* ---------- RECORD VIEW ---------- */
+  .cam-wrap{
+    position:relative;
+    background:#000;
+    aspect-ratio:3/4;
+    width:100%;
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  video#cam{
+    width:100%;height:100%;object-fit:cover;
+    display:block;
+  }
+  .cam-overlay{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:space-between;
+    padding:14px;
+    pointer-events:none;
+  }
+  .rec-badge{
+    align-self:flex-start;
+    display:flex;align-items:center;gap:6px;
+    background:rgba(21,17,9,0.7);
+    padding:6px 10px;
+    border-radius:20px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    opacity:0;
+    transition:opacity .2s;
+  }
+  .rec-badge.show{opacity:1;}
+  .rec-dot{
+    width:9px;height:9px;border-radius:50%;
+    background:var(--seal);
+  }
+  .rec-badge.show .rec-dot{animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .reticle{
+    width:70%;
+    aspect-ratio:2.2/1;
+    border:2px solid rgba(242,233,213,0.55);
+    border-radius:10px;
+    position:relative;
+    overflow:hidden;
+  }
+  .reticle::before{
+    content:"";
+    position:absolute;left:6%;right:6%;height:2px;
+    background:var(--tape);
+    box-shadow:0 0 8px var(--tape);
+    top:50%;
+    animation:scanline 1.8s ease-in-out infinite;
+  }
+  @keyframes scanline{
+    0%,100%{top:12%;}
+    50%{top:88%;}
+  }
+  .reticle-corners span{position:absolute;width:16px;height:16px;border:2px solid var(--tape);}
+  .cam-hint{
+    font-size:12px;color:var(--paper-dim);
+    background:rgba(21,17,9,0.7);
+    padding:5px 10px;border-radius:20px;
+    text-align:center;
+  }
+  .cam-fallback{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;padding:24px;text-align:center;
+    background:var(--ink-2);
+  }
+  .cam-fallback p{font-size:13px;color:var(--paper-dim);line-height:1.5;margin:0;}
+  .btn-retry{
+    background:var(--tape);color:var(--ink);border:none;
+    padding:10px 18px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;
+  }
+
+  .record-panel{
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .code-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--ink-2);
+    border:1px solid rgba(201,168,118,0.25);
+    border-radius:var(--radius-sm);
+    padding:10px 12px;
+  }
+  .code-row label{
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--kraft-dim);
+    display:block;
+    margin-bottom:3px;
+  }
+  .code-row input{
+    background:none;border:none;outline:none;
+    color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:16px;
+    width:100%;
+    letter-spacing:0.02em;
+  }
+  .code-row input::placeholder{color:var(--paper-dim);opacity:.6;}
+  .code-clear{
+    background:none;border:none;color:var(--paper-dim);
+    font-size:18px;cursor:pointer;padding:4px 6px;flex-shrink:0;
+  }
+  .scan-note{
+    font-size:11px;color:var(--kraft-dim);
+    display:flex;align-items:center;gap:6px;
+  }
+  .scan-note .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0;}
+  .scan-note.warn .dot{background:var(--tape);}
+
+  .motion-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--ink-2);
+    border:1px solid rgba(201,168,118,0.25);
+    border-radius:var(--radius-sm);
+    padding:10px 12px;
+    gap:10px;
+  }
+  .motion-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .motion-label{font-size:12px;font-weight:600;color:var(--paper);}
+  .motion-sub{font-size:10.5px;color:var(--kraft-dim);}
+  .motion-sub.active{color:var(--tape);}
+
+  .switch{
+    position:relative;
+    width:42px;height:24px;
+    flex-shrink:0;
+  }
+  .switch input{opacity:0;width:0;height:0;position:absolute;}
+  .switch-track{
+    position:absolute;inset:0;
+    background:rgba(201,168,118,0.25);
+    border-radius:14px;
+    cursor:pointer;
+    transition:background .2s;
+  }
+  .switch-track::before{
+    content:"";
+    position:absolute;
+    width:18px;height:18px;
+    left:3px;top:3px;
+    background:var(--paper);
+    border-radius:50%;
+    transition:transform .2s;
+  }
+  .switch input:checked + .switch-track{background:var(--tape);}
+  .switch input:checked + .switch-track::before{transform:translateX(18px);}
+
+  .motion-settings{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 2px;
+    gap:10px;
+  }
+  .motion-settings-label{font-size:11px;color:var(--kraft-dim);}
+  .motion-settings-value{
+    display:flex;align-items:center;gap:8px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;color:var(--paper);
+  }
+  .stepper{display:flex;align-items:center;gap:6px;}
+  .stepper button{
+    width:24px;height:24px;
+    border-radius:6px;
+    border:1px solid rgba(201,168,118,0.3);
+    background:rgba(201,168,118,0.1);
+    color:var(--paper);
+    font-size:14px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  .motion-hud{
+    position:absolute;
+    top:14px;right:14px;
+    display:none;
+    align-items:center;gap:5px;
+    background:rgba(21,17,9,0.65);
+    padding:5px 9px;
+    border-radius:16px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    pointer-events:none;
+  }
+  .motion-hud.on{display:flex;}
+  .motion-hud .mdot{width:6px;height:6px;border-radius:50%;background:var(--kraft-dim);transition:background .15s;}
+  .motion-hud .mdot.live{background:var(--ok);box-shadow:0 0 6px var(--ok);}
+
+  .transport{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:22px;
+    padding:6px 0 4px;
+  }
+  .timer{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:15px;
+    color:var(--paper-dim);
+    width:56px;
+    text-align:center;
+  }
+  .timer.live{color:var(--seal);}
+  .rec-btn{
+    width:74px;height:74px;
+    border-radius:50%;
+    border:4px solid var(--paper);
+    background:var(--seal);
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .12s;
+    flex-shrink:0;
+  }
+  .rec-btn:active{transform:scale(0.94);}
+  .rec-btn .core{
+    width:26px;height:26px;
+    background:var(--paper);
+    border-radius:6px;
+    transition:all .2s;
+  }
+  .rec-btn.recording .core{
+    border-radius:50%;
+    width:30px;height:30px;
+    background:var(--paper);
+  }
+  .spacer56{width:56px;flex-shrink:0;}
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translate(-50%,20px);
+    background:var(--ok);
+    color:var(--paper);
+    padding:10px 18px;
+    border-radius:24px;
+    font-size:13px;
+    font-weight:600;
+    opacity:0;
+    pointer-events:none;
+    transition:all .25s ease;
+    z-index:60;
+    white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+
+  /* ---------- STAMP OVERLAY ---------- */
+  .stamp-layer{
+    position:fixed;inset:0;
+    background:rgba(21,17,9,0.55);
+    display:none;
+    align-items:center;justify-content:center;
+    z-index:70;
+  }
+  .stamp-layer.show{display:flex;}
+  .stamp{
+    width:180px;height:180px;
+    border:5px solid var(--seal);
+    border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--seal);
+    transform:rotate(-10deg) scale(2.4);
+    opacity:0;
+    text-align:center;
+    padding:10px;
+  }
+  .stamp-layer.show .stamp{
+    animation:slam .45s cubic-bezier(.2,1.4,.4,1) forwards;
+  }
+  @keyframes slam{
+    0%{opacity:0;transform:rotate(-10deg) scale(2.6);}
+    60%{opacity:1;transform:rotate(-8deg) scale(0.94);}
+    100%{opacity:1;transform:rotate(-8deg) scale(1);}
+  }
+  .stamp-title{font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:0.04em;}
+  .stamp-code{font-family:'IBM Plex Mono',monospace;font-size:12px;margin-top:6px;word-break:break-all;padding:0 8px;}
+  .stamp-date{font-family:'IBM Plex Mono',monospace;font-size:9px;margin-top:4px;opacity:.85;}
+
+  /* ---------- HISTORY VIEW ---------- */
+  .history-head{
+    padding:14px 16px 10px;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .search-box{
+    background:var(--ink-2);
+    border:1px solid rgba(201,168,118,0.25);
+    border-radius:var(--radius-sm);
+    padding:9px 12px;
+  }
+  .search-box input{
+    background:none;border:none;outline:none;color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;font-size:14px;width:100%;
+  }
+  .search-box input::placeholder{color:var(--paper-dim);}
+  .summary-line{font-size:11px;color:var(--kraft-dim);font-family:'IBM Plex Mono',monospace;}
+
+  .list{
+    padding:0 16px 24px;
+    overflow-y:auto;
+    display:flex;flex-direction:column;gap:10px;
+    flex:1;
+  }
+  .empty{
+    margin:40px 20px;
+    text-align:center;
+    color:var(--paper-dim);
+    font-size:13px;
+    line-height:1.6;
+  }
+  .empty strong{display:block;color:var(--paper);font-family:'Archivo Black',sans-serif;font-size:15px;margin-bottom:8px;font-weight:400;}
+
+  .card{
+    background:var(--ink-2);
+    border:1px solid rgba(201,168,118,0.22);
+    border-left:4px solid var(--tape);
+    border-radius:var(--radius-sm);
+    padding:12px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .card-code{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:15px;
+    color:var(--paper);
+    word-break:break-all;
+  }
+  .card-code.none{color:var(--paper-dim);font-style:italic;}
+  .card-meta{font-size:11px;color:var(--kraft-dim);white-space:nowrap;text-align:right;}
+  .card-actions{display:flex;gap:8px;}
+  .card-actions button{
+    flex:1;
+    padding:8px 0;
+    border-radius:7px;
+    border:none;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .btn-play{background:var(--tape);color:var(--ink);}
+  .btn-dl{background:rgba(201,168,118,0.15);color:var(--paper);border:1px solid rgba(201,168,118,0.3) !important;}
+  .btn-del{background:rgba(184,56,44,0.15);color:#e39189;border:1px solid rgba(184,56,44,0.35) !important;}
+
+  /* ---------- MODAL ---------- */
+  .modal{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.85);
+    display:none;
+    align-items:center;justify-content:center;
+    z-index:80;
+    padding:20px;
+  }
+  .modal.show{display:flex;}
+  .modal-box{
+    background:var(--ink-2);
+    border-radius:var(--radius);
+    padding:16px;
+    max-width:440px;width:100%;
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .modal-box video{width:100%;border-radius:8px;background:#000;}
+  .modal-title{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--paper-dim);}
+  .modal-actions{display:flex;gap:8px;}
+  .modal-actions button{flex:1;padding:10px 0;border-radius:8px;border:none;font-weight:600;font-size:13px;cursor:pointer;}
+
+  .note-banner{
+    margin:0 16px 10px;
+    background:rgba(212,167,58,0.1);
+    border:1px solid rgba(212,167,58,0.3);
+    border-radius:8px;
+    padding:9px 11px;
+    font-size:11px;
+    color:var(--kraft);
+    line-height:1.5;
+  }
+
+  ::-webkit-scrollbar{width:0;height:0;}
+  button:focus-visible, input:focus-visible{outline:2px solid var(--tape);outline-offset:2px;}
+
+  @media (prefers-reduced-motion: reduce){
+    .reticle::before, .rec-badge .rec-dot, .stamp{animation:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">SP</div>
+      <div>
+        <div class="brand-name">SellerProof BR</div>
+        <div class="brand-sub">Vídeo-prova de embalagem</div>
+      </div>
+    </div>
+    <div class="storage-pill" id="storagePill">0 vídeos<br>0 MB</div>
+  </header>
+
+  <nav>
+    <button id="tabRecord" class="active">Gravar</button>
+    <button id="tabHistory">Histórico</button>
+  </nav>
+
+  <main>
+    <!-- RECORD VIEW -->
+    <section id="viewRecord" class="active">
+      <div class="cam-wrap">
+        <video id="cam" autoplay playsinline muted></video>
+        <div class="cam-overlay">
+          <div class="rec-badge" id="recBadge"><span class="rec-dot"></span><span id="recBadgeText">GRAVANDO</span></div>
+          <div class="reticle" id="reticle"></div>
+          <div class="cam-hint" id="camHint">Aponte para o código de barras do pedido</div>
+        </div>
+        <div class="motion-hud on" id="motionHud"><span class="mdot" id="motionDot"></span><span id="motionHudText">Sem movimento</span></div>
+        <div class="cam-fallback" id="camFallback" style="display:none">
+          <p id="camFallbackMsg">Precisamos da câmera para gravar a prova de embalagem.</p>
+          <button class="btn-retry" id="btnRetryCam">Permitir câmera</button>
+        </div>
+      </div>
+
+      <div class="record-panel">
+        <div class="code-row">
+          <div style="flex:1">
+            <label for="orderCode">Código do pedido</label>
+            <input id="orderCode" type="text" placeholder="Escaneie ou digite o código" autocomplete="off">
+          </div>
+          <button class="code-clear" id="btnClearCode" title="Limpar código">✕</button>
+        </div>
+        <div class="scan-note" id="scanNote"><span class="dot"></span><span id="scanNoteText">Leitura automática ativa</span></div>
+
+        <div class="motion-row">
+          <div class="motion-info">
+            <span class="motion-label">Gravar por movimento</span>
+            <span class="motion-sub" id="motionSubText">Inicia sozinho ao detectar movimento na caixa</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="motionToggle" checked>
+            <span class="switch-track"></span>
+          </label>
+        </div>
+
+        <div class="motion-settings" id="motionSettings" style="display:flex">
+          <span class="motion-settings-label">Parar após sem movimento</span>
+          <div class="motion-settings-value">
+            <div class="stepper">
+              <button id="motionStopMinus" type="button">−</button>
+              <span id="motionStopValue">3s</span>
+              <button id="motionStopPlus" type="button">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="motion-row">
+          <div class="motion-info">
+            <span class="motion-label">Salvar automático</span>
+            <span class="motion-sub" id="autoSaveSubText">Grava em Download/Vídeo prova sem precisar tocar</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="autoSaveToggle" checked>
+            <span class="switch-track"></span>
+          </label>
+        </div>
+
+        <div class="transport">
+          <div class="spacer56"></div>
+          <button class="rec-btn" id="recBtn"><span class="core"></span></button>
+          <div class="timer" id="timer">00:00</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HISTORY VIEW -->
+    <section id="viewHistory">
+      <div class="history-head">
+        <div class="search-box"><input id="searchInput" type="text" placeholder="Buscar por código do pedido..."></div>
+        <div class="summary-line" id="summaryLine">Nenhuma prova salva ainda</div>
+      </div>
+      <div class="list" id="list"></div>
+    </section>
+  </main>
+
+  <canvas id="motionCanvas" width="64" height="48" style="display:none"></canvas>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="stamp-layer" id="stampLayer">
+    <div class="stamp">
+      <div class="stamp-title">PROVA SALVA</div>
+      <div class="stamp-code" id="stampCode">—</div>
+      <div class="stamp-date" id="stampDate">—</div>
+    </div>
+  </div>
+
+  <div class="modal" id="videoModal">
+    <div class="modal-box">
+      <div class="modal-title" id="modalTitle">—</div>
+      <video id="modalVideo" controls playsinline></video>
+      <div class="modal-actions">
+        <button class="btn-dl" id="modalDownload" style="border:1px solid rgba(201,168,118,0.3)">Baixar</button>
+        <button class="btn-del" id="modalDelete" style="border:1px solid rgba(184,56,44,0.35)">Excluir</button>
+        <button style="background:rgba(255,255,255,0.08);color:var(--paper)" id="modalClose">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ INDEXEDDB ============ */
+  const DB_NAME = "sellerproof-db";
+  const STORE = "recordings";
+  let dbPromise = null;
+
+  function openDB(){
+    if(dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve,reject)=>{
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = (e)=>{
+        const db = e.target.result;
+        if(!db.objectStoreNames.contains(STORE)){
+          const store = db.createObjectStore(STORE,{keyPath:"id",autoIncrement:true});
+          store.createIndex("createdAt","createdAt");
+        }
+      };
+      req.onsuccess = ()=>resolve(req.result);
+      req.onerror = ()=>reject(req.error);
+    });
+    return dbPromise;
+  }
+
+  async function dbAdd(record){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE,"readwrite");
+      const req = tx.objectStore(STORE).add(record);
+      req.onsuccess = ()=>resolve(req.result);
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  async function dbGetAll(){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE,"readonly");
+      const req = tx.objectStore(STORE).getAll();
+      req.onsuccess = ()=>resolve(req.result || []);
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  async function dbDelete(id){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE,"readwrite");
+      const req = tx.objectStore(STORE).delete(id);
+      req.onsuccess = ()=>resolve();
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  /* ============ HELPERS ============ */
+  function fmtBytes(b){
+    if(b < 1024*1024) return (b/1024).toFixed(0)+" KB";
+    return (b/(1024*1024)).toFixed(1)+" MB";
+  }
+  function fmtDuration(sec){
+    const m = Math.floor(sec/60).toString().padStart(2,"0");
+    const s = Math.floor(sec%60).toString().padStart(2,"0");
+    return m+":"+s;
+  }
+  function fmtDate(ts){
+    const d = new Date(ts);
+    return d.toLocaleDateString("pt-BR")+" "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  }
+  let toastTimer = null;
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove("show"), 2200);
+  }
+
+  /* ============ NAV ============ */
+  const tabRecord = document.getElementById("tabRecord");
+  const tabHistory = document.getElementById("tabHistory");
+  const viewRecord = document.getElementById("viewRecord");
+  const viewHistory = document.getElementById("viewHistory");
+
+  function goTo(tab){
+    if(tab === "record"){
+      tabRecord.classList.add("active"); tabHistory.classList.remove("active");
+      viewRecord.classList.add("active"); viewHistory.classList.remove("active");
+    } else {
+      tabHistory.classList.add("active"); tabRecord.classList.remove("active");
+      viewHistory.classList.add("active"); viewRecord.classList.remove("active");
+      renderList();
+    }
+  }
+  tabRecord.addEventListener("click", ()=>goTo("record"));
+  tabHistory.addEventListener("click", ()=>goTo("history"));
+
+  /* ============ CAMERA + BARCODE ============ */
+  const camVideo = document.getElementById("cam");
+  const camFallback = document.getElementById("camFallback");
+  const camFallbackMsg = document.getElementById("camFallbackMsg");
+  const btnRetryCam = document.getElementById("btnRetryCam");
+  const orderCodeInput = document.getElementById("orderCode");
+  const scanNote = document.getElementById("scanNote");
+  const scanNoteText = document.getElementById("scanNoteText");
+
+  let mediaStream = null;
+  let barcodeDetector = null;
+  let scanIntervalId = null;
+
+  async function initCamera(){
+    camFallback.style.display = "none";
+    try{
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video:{ facingMode:{ ideal:"environment" }, width:{ideal:1280}, height:{ideal:960} },
+        audio:false
+      });
+      camVideo.srcObject = mediaStream;
+      await camVideo.play().catch(()=>{});
+      setupBarcodeDetector();
+      if(motionEnabled){
+        prevFrame = null;
+        lastMotionAt = 0;
+        startMotionLoop();
+      }
+    }catch(err){
+      camFallback.style.display = "flex";
+      if(err && err.name === "NotAllowedError"){
+        camFallbackMsg.textContent = "A câmera foi bloqueada. Permita o acesso nas configurações do navegador e tente novamente.";
+      } else if(err && err.name === "NotFoundError"){
+        camFallbackMsg.textContent = "Nenhuma câmera foi encontrada neste aparelho.";
+      } else {
+        camFallbackMsg.textContent = "Não foi possível acessar a câmera. Toque para tentar novamente.";
+      }
+    }
+  }
+  btnRetryCam.addEventListener("click", initCamera);
+
+  function setupBarcodeDetector(){
+    if("BarcodeDetector" in window){
+      try{
+        barcodeDetector = new BarcodeDetector({formats:["ean_13","ean_8","code_128","upc_a","upc_e","qr_code"]});
+        scanNoteText.textContent = "Leitura automática ativa";
+        scanNote.classList.remove("warn");
+        clearInterval(scanIntervalId);
+        scanIntervalId = setInterval(scanFrame, 400);
+        return;
+      }catch(e){ /* fall through to manual */ }
+    }
+    scanNoteText.textContent = "Leitura automática indisponível — digite o código manualmente";
+    scanNote.classList.add("warn");
+  }
+
+  async function scanFrame(){
+    if(!barcodeDetector || camVideo.readyState < 2) return;
+    try{
+      const codes = await barcodeDetector.detect(camVideo);
+      if(codes && codes.length){
+        const value = codes[0].rawValue;
+        if(value && orderCodeInput.value !== value){
+          orderCodeInput.value = value;
+          scanNoteText.textContent = "Código capturado ✓";
+        }
+      }
+    }catch(e){ /* ignore transient detection errors */ }
+  }
+
+  document.getElementById("btnClearCode").addEventListener("click", ()=>{
+    orderCodeInput.value = "";
+    if(barcodeDetector){ scanNoteText.textContent = "Leitura automática ativa"; }
+  });
+
+  /* ============ RECORDING ============ */
+  const recBtn = document.getElementById("recBtn");
+  const recBadge = document.getElementById("recBadge");
+  const timerEl = document.getElementById("timer");
+  const stampLayer = document.getElementById("stampLayer");
+  const stampCode = document.getElementById("stampCode");
+  const stampDate = document.getElementById("stampDate");
+
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recording = false;
+  let recTimerId = null;
+  let recSeconds = 0;
+  let recStartedAt = 0;
+
+  function pickMimeType(){
+    const candidates = ["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
+    for(const c of candidates){
+      if(window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;
+    }
+    return "";
+  }
+
+  function startRecording(){
+    if(!mediaStream){ showToast("Câmera indisponível"); return; }
+    recordedChunks = [];
+    const mimeType = pickMimeType();
+    try{
+      mediaRecorder = mimeType ? new MediaRecorder(mediaStream,{mimeType}) : new MediaRecorder(mediaStream);
+    }catch(e){
+      showToast("Gravação não suportada neste navegador");
+      return;
+    }
+    mediaRecorder.ondataavailable = (e)=>{ if(e.data && e.data.size>0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = onRecordingStopped;
+    mediaRecorder.start();
+
+    recording = true;
+    recSeconds = 0;
+    recStartedAt = Date.now();
+    timerEl.textContent = "00:00";
+    timerEl.classList.add("live");
+    recBadge.classList.add("show");
+    recBtn.classList.add("recording");
+    recTimerId = setInterval(()=>{
+      recSeconds = (Date.now()-recStartedAt)/1000;
+      timerEl.textContent = fmtDuration(recSeconds);
+    }, 250);
+  }
+
+  function stopRecording(){
+    if(mediaRecorder && mediaRecorder.state !== "inactive"){
+      mediaRecorder.stop();
+    }
+  }
+
+  async function onRecordingStopped(){
+    clearInterval(recTimerId);
+    recording = false;
+    autoStoppedByMotion = false;
+    timerEl.classList.remove("live");
+    recBadge.classList.remove("show");
+    recBtn.classList.remove("recording");
+
+    const blob = new Blob(recordedChunks, {type: recordedChunks[0]?.type || "video/webm"});
+    if(blob.size < 500){
+      showToast("Gravação muito curta, tente novamente");
+      timerEl.textContent = "00:00";
+      return;
+    }
+    const code = orderCodeInput.value.trim();
+    const now = Date.now();
+    const record = {
+      code: code || "",
+      createdAt: now,
+      durationSec: Math.round(recSeconds),
+      size: blob.size,
+      blob: blob
+    };
+    try{
+      await dbAdd(record);
+      runStampAnimation(code, now);
+      updateStoragePill();
+      if(autoSaveEnabled){
+        downloadRecord(record);
+        showToast("Prova salva em Download/" + AUTO_SAVE_SUBFOLDER);
+      }
+      orderCodeInput.value = "";
+      if(barcodeDetector) scanNoteText.textContent = "Leitura automática ativa";
+    }catch(e){
+      showToast("Erro ao salvar. Baixe manualmente pela galeria se persistir.");
+    }
+    timerEl.textContent = "00:00";
+  }
+
+  function runStampAnimation(code, ts){
+    stampCode.textContent = code ? code : "SEM CÓDIGO";
+    stampDate.textContent = fmtDate(ts);
+    stampLayer.classList.add("show");
+    setTimeout(()=>{ stampLayer.classList.remove("show"); }, 1000);
+  }
+
+  recBtn.addEventListener("click", ()=>{
+    // Manual tap always available, even in motion mode (acts as override).
+    if(!recording) startRecording(); else stopRecording();
+  });
+
+  /* ============ AUTO-SAVE TOGGLE ============ */
+  const autoSaveToggle = document.getElementById("autoSaveToggle");
+  let autoSaveEnabled = true;
+  autoSaveToggle.addEventListener("change", ()=>{
+    autoSaveEnabled = autoSaveToggle.checked;
+  });
+
+  /* ============ MOTION DETECTION ============ */
+  const motionToggle = document.getElementById("motionToggle");
+  const motionSettings = document.getElementById("motionSettings");
+  const motionStopValue = document.getElementById("motionStopValue");
+  const motionStopMinus = document.getElementById("motionStopMinus");
+  const motionStopPlus = document.getElementById("motionStopPlus");
+  const motionSubText = document.getElementById("motionSubText");
+  const motionHud = document.getElementById("motionHud");
+  const motionDot = document.getElementById("motionDot");
+  const motionHudText = document.getElementById("motionHudText");
+  const motionCanvas = document.getElementById("motionCanvas");
+  const motionCtx = motionCanvas.getContext("2d", {willReadFrequently:true});
+
+  let motionEnabled = true;
+  let motionLoopId = null;
+  let prevFrame = null;
+  let lastMotionAt = 0;
+  let autoStoppedByMotion = false; // true if current recording was started by motion mode
+  const MOTION_PIXEL_DIFF = 28;      // per-channel diff to count a pixel as "changed"
+  const MOTION_PERCENT_TRIGGER = 1.5; // % of changed pixels needed to count as motion
+  let stopAfterSeconds = 3;
+
+  function setMotionSub(){
+    if(!motionEnabled){
+      motionSubText.textContent = "Inicia sozinho ao detectar movimento na caixa";
+      return;
+    }
+    motionSubText.textContent = "Ativo — vai iniciar e parar sozinho";
+  }
+
+  motionToggle.addEventListener("change", ()=>{
+    motionEnabled = motionToggle.checked;
+    motionSettings.style.display = motionEnabled ? "flex" : "none";
+    motionHud.classList.toggle("on", motionEnabled);
+    setMotionSub();
+    if(motionEnabled){
+      prevFrame = null;
+      lastMotionAt = 0;
+      startMotionLoop();
+    } else {
+      stopMotionLoop();
+      // If a motion-triggered recording is running, leave it to the user to stop manually.
+    }
+  });
+
+  motionStopMinus.addEventListener("click", ()=>{
+    stopAfterSeconds = Math.max(1, stopAfterSeconds - 1);
+    motionStopValue.textContent = stopAfterSeconds + "s";
+  });
+  motionStopPlus.addEventListener("click", ()=>{
+    stopAfterSeconds = Math.min(15, stopAfterSeconds + 1);
+    motionStopValue.textContent = stopAfterSeconds + "s";
+  });
+
+  function startMotionLoop(){
+    stopMotionLoop();
+    motionLoopId = setInterval(motionTick, 220);
+  }
+  function stopMotionLoop(){
+    if(motionLoopId){ clearInterval(motionLoopId); motionLoopId = null; }
+  }
+
+  function motionTick(){
+    if(!mediaStream || camVideo.readyState < 2) return;
+
+    const w = motionCanvas.width, h = motionCanvas.height;
+    motionCtx.drawImage(camVideo, 0, 0, w, h);
+    let frame;
+    try{
+      frame = motionCtx.getImageData(0, 0, w, h).data;
+    }catch(e){ return; }
+
+    if(prevFrame){
+      let changed = 0;
+      const total = w*h;
+      // sample every pixel's luminance-ish diff (cheap: use R channel + G channel)
+      for(let i=0; i<frame.length; i+=4){
+        const dr = Math.abs(frame[i]-prevFrame[i]);
+        const dg = Math.abs(frame[i+1]-prevFrame[i+1]);
+        const db = Math.abs(frame[i+2]-prevFrame[i+2]);
+        if((dr+dg+db)/3 > MOTION_PIXEL_DIFF) changed++;
+      }
+      const percent = (changed/total)*100;
+      const hasMotion = percent > MOTION_PERCENT_TRIGGER;
+
+      motionDot.classList.toggle("live", hasMotion);
+      motionHudText.textContent = hasMotion ? "Movimento" : "Sem movimento";
+
+      if(hasMotion){
+        lastMotionAt = Date.now();
+        if(!recording){
+          autoStoppedByMotion = true;
+          startRecording();
+        }
+      } else if(recording && autoStoppedByMotion){
+        const idleSec = (Date.now() - lastMotionAt) / 1000;
+        if(idleSec >= stopAfterSeconds){
+          stopRecording();
+          autoStoppedByMotion = false;
+        }
+      }
+    }
+    prevFrame = frame;
+  }
+
+  /* ============ HISTORY LIST ============ */
+  const listEl = document.getElementById("list");
+  const searchInput = document.getElementById("searchInput");
+  const summaryLine = document.getElementById("summaryLine");
+  const storagePill = document.getElementById("storagePill");
+
+  let cachedRecords = [];
+
+  async function updateStoragePill(){
+    const all = await dbGetAll();
+    cachedRecords = all;
+    const totalSize = all.reduce((s,r)=>s+r.size,0);
+    storagePill.innerHTML = all.length + (all.length===1?" vídeo":" vídeos") + "<br>" + fmtBytes(totalSize);
+  }
+
+  async function renderList(){
+    const all = await dbGetAll();
+    cachedRecords = all.sort((a,b)=>b.createdAt-a.createdAt);
+    const q = searchInput.value.trim().toLowerCase();
+    const filtered = q ? cachedRecords.filter(r=> (r.code||"").toLowerCase().includes(q)) : cachedRecords;
+
+    const totalSize = cachedRecords.reduce((s,r)=>s+r.size,0);
+    summaryLine.textContent = cachedRecords.length
+      ? cachedRecords.length + (cachedRecords.length===1?" prova salva":" provas salvas") + " neste aparelho · " + fmtBytes(totalSize) + " usados"
+      : "Nenhuma prova salva ainda";
+
+    listEl.innerHTML = "";
+    if(!filtered.length){
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML = q
+        ? "<strong>Nada encontrado</strong>Nenhuma prova com esse código."
+        : "<strong>Ainda sem provas</strong>Grave a embalagem de um pedido na aba Gravar. Cada vídeo salvo aqui vira um selo de prova, pronto para anexar em disputas.";
+      listEl.appendChild(empty);
+      return;
+    }
+    for(const r of filtered){
+      listEl.appendChild(buildCard(r));
+    }
+  }
+
+  function buildCard(r){
+    const card = document.createElement("div");
+    card.className = "card";
+    const codeClass = r.code ? "card-code" : "card-code none";
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="${codeClass}">${r.code ? escapeHtml(r.code) : "Sem código"}</div>
+        <div class="card-meta">${fmtDate(r.createdAt)}<br>${fmtDuration(r.durationSec)} · ${fmtBytes(r.size)}</div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-play">Assistir</button>
+        <button class="btn-dl">Baixar</button>
+        <button class="btn-del">Excluir</button>
+      </div>
+    `;
+    card.querySelector(".btn-play").addEventListener("click", ()=>openModal(r));
+    card.querySelector(".btn-dl").addEventListener("click", ()=>downloadRecord(r));
+    card.querySelector(".btn-del").addEventListener("click", async ()=>{
+      if(confirm("Excluir esta prova de embalagem? Essa ação não pode ser desfeita.")){
+        await dbDelete(r.id);
+        showToast("Prova excluída");
+        renderList();
+        updateStoragePill();
+      }
+    });
+    return card;
+  }
+
+  function escapeHtml(s){
+    const d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  const AUTO_SAVE_SUBFOLDER = "Vídeo prova"; // cria Download/Vídeo prova automaticamente
+
+  function downloadRecord(r){
+    const url = URL.createObjectURL(r.blob);
+    const a = document.createElement("a");
+    const safeCode = (r.code || "sem-codigo").replace(/[^a-zA-Z0-9-_]/g,"_");
+    const d = new Date(r.createdAt);
+    const stamp = d.toISOString().slice(0,19).replace(/[:T]/g,"-");
+    a.href = url;
+    a.download = `${AUTO_SAVE_SUBFOLDER}/prova_pedido_${safeCode}_${stamp}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+  }
+
+  searchInput.addEventListener("input", renderList);
+
+  /* ============ MODAL ============ */
+  const videoModal = document.getElementById("videoModal");
+  const modalVideo = document.getElementById("modalVideo");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalDownload = document.getElementById("modalDownload");
+  const modalDelete = document.getElementById("modalDelete");
+  const modalClose = document.getElementById("modalClose");
+  let currentModalRecord = null;
+  let currentModalUrl = null;
+
+  function openModal(r){
+    currentModalRecord = r;
+    currentModalUrl = URL.createObjectURL(r.blob);
+    modalVideo.src = currentModalUrl;
+    modalTitle.textContent = (r.code || "Sem código") + " · " + fmtDate(r.createdAt);
+    videoModal.classList.add("show");
+  }
+  function closeModal(){
+    videoModal.classList.remove("show");
+    modalVideo.pause();
+    modalVideo.removeAttribute("src");
+    modalVideo.load();
+    if(currentModalUrl){ URL.revokeObjectURL(currentModalUrl); currentModalUrl = null; }
+    currentModalRecord = null;
+  }
+  modalClose.addEventListener("click", closeModal);
+  videoModal.addEventListener("click", (e)=>{ if(e.target === videoModal) closeModal(); });
+  modalDownload.addEventListener("click", ()=>{ if(currentModalRecord) downloadRecord(currentModalRecord); });
+  modalDelete.addEventListener("click", async ()=>{
+    if(!currentModalRecord) return;
+    if(confirm("Excluir esta prova de embalagem? Essa ação não pode ser desfeita.")){
+      await dbDelete(currentModalRecord.id);
+      closeModal();
+      showToast("Prova excluída");
+      renderList();
+      updateStoragePill();
+    }
+  });
+
+  /* ============ INIT ============ */
+  initCamera();
+  updateStoragePill();
+
+  window.addEventListener("beforeunload", ()=>{
+    if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); }
+  });
+
+})();
+</script>
+</body>
+</html>
