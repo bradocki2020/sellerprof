@@ -1,0 +1,1 @@
+# Venda Única - regras ProGuard
