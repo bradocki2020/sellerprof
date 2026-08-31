@@ -1,15 +1,18 @@
 package br.com.pimata.vendaunica;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.text.InputType;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
@@ -21,6 +24,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -30,11 +34,14 @@ import java.util.List;
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 7101;
     private static final String APP_URL = "https://app.buildy.so/fuzzy-walrus-5266/venda-unica";
+    private static final String PREFS = "venda_unica_secure_prefs";
+    private static final String KEY_ADMIN_TOKEN = "admin_token";
 
     private WebView webView;
     private ProgressBar progressBar;
     private ValueCallback<Uri[]> fileCallback;
     private Uri pendingCaptureUri;
+    private SharedPreferences preferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,14 +50,70 @@ public class MainActivity extends Activity {
 
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
+        preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
 
         configureWebView();
 
+        webView.setOnLongClickListener(v -> {
+            promptAdminToken(true);
+            return true;
+        });
+
         if (savedInstanceState == null) {
-            webView.loadUrl(APP_URL);
+            openAdminOrPrompt();
         } else {
             webView.restoreState(savedInstanceState);
         }
+    }
+
+    private void openAdminOrPrompt() {
+        String token = preferences.getString(KEY_ADMIN_TOKEN, "");
+        if (token == null || token.trim().isEmpty()) {
+            promptAdminToken(false);
+        } else {
+            loadAdmin(token.trim());
+        }
+    }
+
+    private void promptAdminToken(boolean replacing) {
+        final EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint("Chave do painel");
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+        if (replacing) {
+            input.setText(preferences.getString(KEY_ADMIN_TOKEN, ""));
+            input.selectAll();
+        }
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(replacing ? "Trocar chave do painel" : "Ativar Venda Única")
+                .setMessage("Informe a chave administrativa do painel. Ela será salva somente neste aparelho.")
+                .setView(input)
+                .setCancelable(replacing)
+                .setNegativeButton(replacing ? "Cancelar" : null, null)
+                .setPositiveButton("Entrar", null)
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String token = input.getText().toString().trim();
+            if (token.length() < 8) {
+                input.setError("Chave inválida");
+                return;
+            }
+            preferences.edit().putString(KEY_ADMIN_TOKEN, token).apply();
+            dialog.dismiss();
+            loadAdmin(token);
+        }));
+
+        dialog.show();
+    }
+
+    private void loadAdmin(String token) {
+        Uri adminUrl = Uri.parse(APP_URL)
+                .buildUpon()
+                .appendQueryParameter("app_admin", token)
+                .build();
+        webView.loadUrl(adminUrl.toString());
     }
 
     private void configureWebView() {
@@ -66,7 +129,7 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.0.1");
 
         webView.setBackgroundColor(Color.WHITE);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -125,7 +188,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPermissionRequest(PermissionRequest request) {
-                runOnUiThread(() -> request.deny());
+                runOnUiThread(request::deny);
             }
         });
     }
