@@ -52,7 +52,8 @@ jobs:
           mkdir -p apksigner-tool/lib
           cp "$ANDROID_HOME/build-tools/36.0.0/apksigner" apksigner-tool/apksigner
           cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" apksigner-tool/lib/apksigner.jar
-          chmod +x apksigner-tool/apksigner
+          cp "$ANDROID_HOME/build-tools/36.0.0/zipalign" apksigner-tool/zipalign
+          chmod +x apksigner-tool/apksigner apksigner-tool/zipalign
           sha256sum VendaUnica-v1.3.0-debug.apk VendaUnica-v1.3.0-release-unsigned.apk VendaUnica-v1.3.0-release-unsigned.aab > VendaUnica-v1.3.0-unsigned.sha256.txt
 
       - name: Upload Android artifacts
