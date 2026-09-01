@@ -49,6 +49,10 @@ jobs:
           cp venda-unica-android/app/build/outputs/apk/debug/app-debug.apk VendaUnica-v1.3.0-debug.apk
           cp venda-unica-android/app/build/outputs/apk/release/app-release-unsigned.apk VendaUnica-v1.3.0-release-unsigned.apk
           cp venda-unica-android/app/build/outputs/bundle/release/app-release.aab VendaUnica-v1.3.0-release-unsigned.aab
+          mkdir -p apksigner-tool/lib
+          cp "$ANDROID_HOME/build-tools/36.0.0/apksigner" apksigner-tool/apksigner
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" apksigner-tool/lib/apksigner.jar
+          chmod +x apksigner-tool/apksigner
           sha256sum VendaUnica-v1.3.0-debug.apk VendaUnica-v1.3.0-release-unsigned.apk VendaUnica-v1.3.0-release-unsigned.aab > VendaUnica-v1.3.0-unsigned.sha256.txt
 
       - name: Upload Android artifacts
@@ -60,5 +64,6 @@ jobs:
             VendaUnica-v1.3.0-release-unsigned.apk
             VendaUnica-v1.3.0-release-unsigned.aab
             VendaUnica-v1.3.0-unsigned.sha256.txt
+            apksigner-tool/**
           if-no-files-found: error
           retention-days: 30
