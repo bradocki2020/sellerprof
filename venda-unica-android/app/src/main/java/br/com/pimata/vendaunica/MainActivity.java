@@ -135,8 +135,7 @@ public class MainActivity extends Activity {
             @Override
             public void onAuthenticationError(int errorCode, CharSequence errString) {
                 super.onAuthenticationError(errorCode, errString);
-                if (errorCode == BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON ||
-                        errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED ||
+                if (errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED ||
                         errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED) {
                     return;
                 }
