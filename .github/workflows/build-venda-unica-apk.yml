@@ -1,4 +1,4 @@
-name: Build Venda Unica APK
+name: Build Venda Unica APK and AAB
 
 on:
   push:
@@ -13,9 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  build-apk:
+  build-android:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -40,21 +40,25 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build installable APK
+      - name: Build APK and AAB
         working-directory: venda-unica-android
-        run: gradle --no-daemon clean assembleDebug
+        run: gradle --no-daemon clean assembleDebug assembleRelease bundleRelease
 
-      - name: Prepare artifact
+      - name: Prepare artifacts
         run: |
-          cp venda-unica-android/app/build/outputs/apk/debug/app-debug.apk VendaUnica-v1.2.0.apk
-          sha256sum VendaUnica-v1.2.0.apk > VendaUnica-v1.2.0.sha256.txt
+          cp venda-unica-android/app/build/outputs/apk/debug/app-debug.apk VendaUnica-v1.3.0-debug.apk
+          cp venda-unica-android/app/build/outputs/apk/release/app-release-unsigned.apk VendaUnica-v1.3.0-release-unsigned.apk
+          cp venda-unica-android/app/build/outputs/bundle/release/app-release.aab VendaUnica-v1.3.0-release-unsigned.aab
+          sha256sum VendaUnica-v1.3.0-debug.apk VendaUnica-v1.3.0-release-unsigned.apk VendaUnica-v1.3.0-release-unsigned.aab > VendaUnica-v1.3.0-unsigned.sha256.txt
 
-      - name: Upload APK
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: VendaUnica-v1.2.0-APK
+          name: VendaUnica-v1.3.0-UNSIGNED
           path: |
-            VendaUnica-v1.2.0.apk
-            VendaUnica-v1.2.0.sha256.txt
+            VendaUnica-v1.3.0-debug.apk
+            VendaUnica-v1.3.0-release-unsigned.apk
+            VendaUnica-v1.3.0-release-unsigned.aab
+            VendaUnica-v1.3.0-unsigned.sha256.txt
           if-no-files-found: error
           retention-days: 30
