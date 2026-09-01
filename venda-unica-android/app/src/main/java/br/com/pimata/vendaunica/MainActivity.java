@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Ativação inicial")
-                .setMessage("Esta etapa acontece somente na primeira instalação. Depois, o Venda Única abre usando a biometria do celular.")
+                .setMessage("Esta etapa acontece somente na primeira instalação ou após apagar todos os dados do app. Depois, o Venda Única abre usando a biometria do celular.")
                 .setView(input)
                 .setCancelable(false)
                 .setPositiveButton("Ativar", null)
@@ -115,7 +115,7 @@ public class MainActivity extends Activity {
         BiometricPrompt prompt = new BiometricPrompt.Builder(this)
                 .setTitle("Venda Única")
                 .setSubtitle("Use sua biometria para abrir o painel")
-                .setDescription("A chave administrativa permanece salva neste aparelho.")
+                .setDescription("A autorização administrativa permanece salva neste aparelho.")
                 .setNegativeButton("Fechar", getMainExecutor(), (dialog, which) -> finish())
                 .build();
 
@@ -161,11 +161,10 @@ public class MainActivity extends Activity {
     }
 
     private void loadAdmin(String token) {
-        Uri adminUrl = Uri.parse(APP_URL)
-                .buildUpon()
-                .appendQueryParameter("app_admin", token)
-                .build();
-        webView.loadUrl(adminUrl.toString());
+        // A credencial fica no fragmento (#admin=...), que não é enviada ao servidor
+        // durante o redirect do link amigável do Buildy e não é perdida no redirecionamento.
+        String adminUrl = APP_URL + "#admin=" + Uri.encode(token);
+        webView.loadUrl(adminUrl);
     }
 
     private void configureWebView() {
@@ -181,7 +180,7 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.2.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.3.1");
 
         webView.setBackgroundColor(Color.WHITE);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
