@@ -1,6 +1,6 @@
 package br.com.pimata.vendaunica;
 
-import android.annotation.JavascriptInterface;
+import android.webkit.JavascriptInterface;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
