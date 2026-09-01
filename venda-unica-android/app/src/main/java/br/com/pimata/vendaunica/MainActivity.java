@@ -1,5 +1,6 @@
 package br.com.pimata.vendaunica;
 
+import android.annotation.JavascriptInterface;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -37,8 +38,10 @@ import java.util.List;
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 7101;
     private static final String APP_URL = "https://app.buildy.so/fuzzy-walrus-5266/venda-unica";
+    private static final String COOKIE_BASE_URL = "https://app.buildy.so";
     private static final String PREFS = "venda_unica_secure_prefs";
     private static final String KEY_ADMIN_TOKEN = "admin_token";
+    private static final String MIGRATION_NONCE = "1861ddeabfeddc96fe8e95c9b975c9edf5ceaa8640545dde";
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -46,6 +49,9 @@ public class MainActivity extends Activity {
     private Uri pendingCaptureUri;
     private SharedPreferences preferences;
     private CancellationSignal biometricCancellationSignal;
+
+    private volatile boolean biometricUnlocked = false;
+    private volatile String activeAdminToken = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,7 +121,7 @@ public class MainActivity extends Activity {
         BiometricPrompt prompt = new BiometricPrompt.Builder(this)
                 .setTitle("Venda Única")
                 .setSubtitle("Use sua biometria para abrir o painel")
-                .setDescription("A autorização administrativa permanece salva neste aparelho.")
+                .setDescription("Sua autorização administrativa fica protegida neste aparelho.")
                 .setNegativeButton("Fechar", getMainExecutor(), (dialog, which) -> finish())
                 .build();
 
@@ -161,10 +167,20 @@ public class MainActivity extends Activity {
     }
 
     private void loadAdmin(String token) {
-        // A credencial fica no fragmento (#admin=...), que não é enviada ao servidor
-        // durante o redirect do link amigável do Buildy e não é perdida no redirecionamento.
-        String adminUrl = APP_URL + "#admin=" + Uri.encode(token);
-        webView.loadUrl(adminUrl);
+        activeAdminToken = token;
+        biometricUnlocked = true;
+
+        CookieManager cookies = CookieManager.getInstance();
+        cookies.setAcceptCookie(true);
+
+        String adminCookie = "vu_admin=" + Uri.encode(token) + "; Path=/; Secure; HttpOnly; SameSite=Lax";
+        String migrationCookie = "vu_migration=" + MIGRATION_NONCE + "; Path=/; Secure; HttpOnly; SameSite=Lax";
+
+        cookies.setCookie(COOKIE_BASE_URL, adminCookie);
+        cookies.setCookie(COOKIE_BASE_URL, migrationCookie);
+        cookies.flush();
+
+        webView.loadUrl(APP_URL);
     }
 
     private void configureWebView() {
@@ -180,7 +196,9 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.3.1");
+        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.3.2");
+
+        webView.addJavascriptInterface(new NativeBridge(), "VendaUnicaNative");
 
         webView.setBackgroundColor(Color.WHITE);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -205,6 +223,14 @@ public class MainActivity extends Activity {
                     return true;
                 } catch (ActivityNotFoundException ignored) {
                     return true;
+                }
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (biometricUnlocked) {
+                    view.evaluateJavascript("try{window.dispatchEvent(new Event('VendaUnicaNativeReady'));}catch(e){}", null);
                 }
             }
 
@@ -242,6 +268,23 @@ public class MainActivity extends Activity {
                 runOnUiThread(request::deny);
             }
         });
+    }
+
+    public final class NativeBridge {
+        @JavascriptInterface
+        public String getAdminToken() {
+            return biometricUnlocked ? activeAdminToken : "";
+        }
+
+        @JavascriptInterface
+        public String getMigrationNonce() {
+            return biometricUnlocked ? MIGRATION_NONCE : "";
+        }
+
+        @JavascriptInterface
+        public boolean isBiometricUnlocked() {
+            return biometricUnlocked;
+        }
     }
 
     private boolean launchFileChooser(WebChromeClient.FileChooserParams params) {
@@ -369,7 +412,8 @@ public class MainActivity extends Activity {
         if (pendingCaptureUri != null) {
             try {
                 getContentResolver().delete(pendingCaptureUri, null, null);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
             pendingCaptureUri = null;
         }
     }
@@ -385,6 +429,9 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        biometricUnlocked = false;
+        activeAdminToken = "";
+
         if (biometricCancellationSignal != null) {
             biometricCancellationSignal.cancel();
             biometricCancellationSignal = null;
@@ -395,6 +442,7 @@ public class MainActivity extends Activity {
         }
         if (webView != null) {
             webView.stopLoading();
+            webView.removeJavascriptInterface("VendaUnicaNative");
             webView.destroy();
         }
         super.onDestroy();
