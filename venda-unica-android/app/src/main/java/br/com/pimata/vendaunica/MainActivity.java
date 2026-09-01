@@ -8,10 +8,13 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.hardware.biometrics.BiometricPrompt;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.text.InputType;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -42,6 +45,7 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> fileCallback;
     private Uri pendingCaptureUri;
     private SharedPreferences preferences;
+    private CancellationSignal biometricCancellationSignal;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,45 +57,30 @@ public class MainActivity extends Activity {
         preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
 
         configureWebView();
-
-        webView.setOnLongClickListener(v -> {
-            promptAdminToken(true);
-            return true;
-        });
-
-        if (savedInstanceState == null) {
-            openAdminOrPrompt();
-        } else {
-            webView.restoreState(savedInstanceState);
-        }
+        openAdminOrPrompt();
     }
 
     private void openAdminOrPrompt() {
         String token = preferences.getString(KEY_ADMIN_TOKEN, "");
         if (token == null || token.trim().isEmpty()) {
-            promptAdminToken(false);
+            promptInitialActivation();
         } else {
-            loadAdmin(token.trim());
+            authenticateAndLoad(token.trim());
         }
     }
 
-    private void promptAdminToken(boolean replacing) {
+    private void promptInitialActivation() {
         final EditText input = new EditText(this);
         input.setSingleLine(true);
-        input.setHint("Chave do painel");
+        input.setHint("Chave de ativação do painel");
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-        if (replacing) {
-            input.setText(preferences.getString(KEY_ADMIN_TOKEN, ""));
-            input.selectAll();
-        }
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(replacing ? "Trocar chave do painel" : "Ativar Venda Única")
-                .setMessage("Informe a chave administrativa do painel. Ela será salva somente neste aparelho.")
+                .setTitle("Ativação inicial")
+                .setMessage("Esta etapa acontece somente na primeira instalação. Depois, o Venda Única abre usando a biometria do celular.")
                 .setView(input)
-                .setCancelable(replacing)
-                .setNegativeButton(replacing ? "Cancelar" : null, null)
-                .setPositiveButton("Entrar", null)
+                .setCancelable(false)
+                .setPositiveButton("Ativar", null)
                 .create();
 
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
@@ -102,10 +91,74 @@ public class MainActivity extends Activity {
             }
             preferences.edit().putString(KEY_ADMIN_TOKEN, token).apply();
             dialog.dismiss();
-            loadAdmin(token);
+            authenticateAndLoad(token);
         }));
 
         dialog.show();
+    }
+
+    private void authenticateAndLoad(String token) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            loadAdmin(token);
+            return;
+        }
+        showBiometricPrompt(token);
+    }
+
+    @android.annotation.TargetApi(Build.VERSION_CODES.P)
+    private void showBiometricPrompt(String token) {
+        if (biometricCancellationSignal != null) {
+            biometricCancellationSignal.cancel();
+        }
+        biometricCancellationSignal = new CancellationSignal();
+
+        BiometricPrompt prompt = new BiometricPrompt.Builder(this)
+                .setTitle("Venda Única")
+                .setSubtitle("Use sua biometria para abrir o painel")
+                .setDescription("A chave administrativa permanece salva neste aparelho.")
+                .setNegativeButton("Fechar", getMainExecutor(), (dialog, which) -> finish())
+                .build();
+
+        prompt.authenticate(biometricCancellationSignal, getMainExecutor(), new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result);
+                loadAdmin(token);
+            }
+
+            @Override
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                Toast.makeText(MainActivity.this, "Biometria não reconhecida. Tente novamente.", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onAuthenticationError(int errorCode, CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                if (errorCode == BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON ||
+                        errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED ||
+                        errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED) {
+                    return;
+                }
+                showBiometricSetupDialog(String.valueOf(errString));
+            }
+        });
+    }
+
+    private void showBiometricSetupDialog(String reason) {
+        new AlertDialog.Builder(this)
+                .setTitle("Biometria necessária")
+                .setMessage("O Android não conseguiu usar a biometria neste aparelho. " + reason)
+                .setPositiveButton("Configurar biometria", (dialog, which) -> {
+                    try {
+                        startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
+                    } catch (Exception ignored) {
+                        Toast.makeText(this, "Abra as configurações de segurança do Android.", Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton("Fechar", (dialog, which) -> finish())
+                .setCancelable(false)
+                .show();
     }
 
     private void loadAdmin(String token) {
@@ -129,7 +182,7 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.0.1");
+        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.2.0");
 
         webView.setBackgroundColor(Color.WHITE);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -324,12 +377,6 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        webView.saveState(outState);
-        super.onSaveInstanceState(outState);
-    }
-
-    @Override
     public void onBackPressed() {
         if (webView.canGoBack()) {
             webView.goBack();
@@ -340,6 +387,10 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (biometricCancellationSignal != null) {
+            biometricCancellationSignal.cancel();
+            biometricCancellationSignal = null;
+        }
         if (fileCallback != null) {
             fileCallback.onReceiveValue(null);
             fileCallback = null;
