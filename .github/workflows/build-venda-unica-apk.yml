@@ -51,20 +51,20 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          cp venda-unica-android/app/build/outputs/apk/debug/app-debug.apk VendaUnica-v1.3.0-debug.apk
-          cp venda-unica-android/app/build/outputs/apk/release/app-release-unsigned.apk VendaUnica-v1.3.0-release-unsigned.apk
-          cp venda-unica-android/app/build/outputs/bundle/release/app-release.aab VendaUnica-v1.3.0-release-unsigned.aab
-          sha256sum VendaUnica-v1.3.0-debug.apk VendaUnica-v1.3.0-release-unsigned.apk VendaUnica-v1.3.0-release-unsigned.aab > VendaUnica-v1.3.0-unsigned.sha256.txt
+          cp venda-unica-android/app/build/outputs/apk/debug/app-debug.apk VendaUnica-v1.3.3-debug.apk
+          cp venda-unica-android/app/build/outputs/apk/release/app-release-unsigned.apk VendaUnica-v1.3.3-release-unsigned.apk
+          cp venda-unica-android/app/build/outputs/bundle/release/app-release.aab VendaUnica-v1.3.3-release-unsigned.aab
+          sha256sum VendaUnica-v1.3.3-debug.apk VendaUnica-v1.3.3-release-unsigned.apk VendaUnica-v1.3.3-release-unsigned.aab > VendaUnica-v1.3.3-unsigned.sha256.txt
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: VendaUnica-v1.3.0-UNSIGNED
+          name: VendaUnica-v1.3.3-UNSIGNED
           path: |
-            VendaUnica-v1.3.0-debug.apk
-            VendaUnica-v1.3.0-release-unsigned.apk
-            VendaUnica-v1.3.0-release-unsigned.aab
-            VendaUnica-v1.3.0-unsigned.sha256.txt
+            VendaUnica-v1.3.3-debug.apk
+            VendaUnica-v1.3.3-release-unsigned.apk
+            VendaUnica-v1.3.3-release-unsigned.aab
+            VendaUnica-v1.3.3-unsigned.sha256.txt
           if-no-files-found: error
           compression-level: 9
           retention-days: 3
