@@ -6,6 +6,9 @@ on:
       - venda-unica-android
     paths:
       - '.github/workflows/check-cloudflare-auth.yml'
+  pull_request:
+    branches:
+      - venda-unica-android
   workflow_dispatch:
 
 permissions:
