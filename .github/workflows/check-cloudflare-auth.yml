@@ -1,0 +1,50 @@
+name: Check Cloudflare Authorization
+
+on:
+  push:
+    branches:
+      - venda-unica-android
+    paths:
+      - '.github/workflows/check-cloudflare-auth.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cloudflare-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required GitHub secrets are present
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'CLOUDFLARE_API_TOKEN is not available to this repository/workflow'; exit 11; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'CLOUDFLARE_ACCOUNT_ID is not available to this repository/workflow'; exit 12; }
+          echo 'Required Cloudflare secrets are available.'
+
+      - name: Verify token with Cloudflare API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          HTTP_CODE=$(curl -sS -o /tmp/cf.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID")
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Cloudflare authorization failed with HTTP $HTTP_CODE"
+            cat /tmp/cf.json | python3 -c "import json,sys; d=json.load(sys.stdin); print({'success':d.get('success'),'errors':d.get('errors')})" || true
+            exit 13
+          fi
+          python3 - <<'PY'
+          import json
+          with open('/tmp/cf.json', encoding='utf-8') as f:
+              d=json.load(f)
+          print('Cloudflare API authorization OK.' if d.get('success') else 'Cloudflare API returned success=false.')
+          if not d.get('success'):
+              raise SystemExit(14)
+          PY
