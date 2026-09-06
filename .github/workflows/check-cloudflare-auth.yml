@@ -1,22 +1,19 @@
 name: Check Cloudflare Authorization
 
 on:
-  push:
-    branches:
-      - venda-unica-android
-    paths:
-      - '.github/workflows/check-cloudflare-auth.yml'
-  pull_request:
-    branches:
-      - venda-unica-android
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: cloudflare-auth-manual-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cloudflare-auth:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Verify required GitHub secrets are present
         env:
@@ -40,14 +37,19 @@ jobs:
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID")
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Cloudflare authorization failed with HTTP $HTTP_CODE"
-            cat /tmp/cf.json | python3 -c "import json,sys; d=json.load(sys.stdin); print({'success':d.get('success'),'errors':d.get('errors')})" || true
+            python3 - <<'PY' || true
+import json
+with open('/tmp/cf.json', encoding='utf-8') as f:
+    d=json.load(f)
+print({'success': d.get('success'), 'errors': d.get('errors')})
+PY
             exit 13
           fi
           python3 - <<'PY'
-          import json
-          with open('/tmp/cf.json', encoding='utf-8') as f:
-              d=json.load(f)
-          print('Cloudflare API authorization OK.' if d.get('success') else 'Cloudflare API returned success=false.')
-          if not d.get('success'):
-              raise SystemExit(14)
-          PY
+import json
+with open('/tmp/cf.json', encoding='utf-8') as f:
+    d=json.load(f)
+print('Cloudflare API authorization OK.' if d.get('success') else 'Cloudflare API returned success=false.')
+if not d.get('success'):
+    raise SystemExit(14)
+PY
