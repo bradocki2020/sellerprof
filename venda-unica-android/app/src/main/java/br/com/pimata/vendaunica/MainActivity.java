@@ -6,6 +6,8 @@ import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.biometrics.BiometricPrompt;
 import android.net.Uri;
@@ -14,7 +16,9 @@ import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.util.Base64;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.SafeBrowsingResponse;
 import android.webkit.ValueCallback;
@@ -27,12 +31,21 @@ import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.core.content.FileProvider;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 7101;
     private static final String APP_URL = "https://venda.pimata.app/admin";
+    private static final String TRUSTED_HOST = "venda.pimata.app";
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -134,11 +147,12 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.3.3");
+        settings.setUserAgentString(settings.getUserAgentString() + " VendaUnicaAndroid/1.3.4");
 
         webView.setBackgroundColor(Color.WHITE);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         WebView.setWebContentsDebuggingEnabled(false);
+        webView.addJavascriptInterface(new NativeBridge(), "VendaUnicaNative");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -146,13 +160,32 @@ public class MainActivity extends Activity {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
                 if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
-                    return false;
+                    if (TRUSTED_HOST.equalsIgnoreCase(uri.getHost())) {
+                        return false;
+                    }
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                    } catch (ActivityNotFoundException ignored) {
+                    }
+                    return true;
                 }
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, uri));
                     return true;
                 } catch (ActivityNotFoundException ignored) {
                     return true;
+                }
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                try {
+                    Uri uri = Uri.parse(url);
+                    if (TRUSTED_HOST.equalsIgnoreCase(uri.getHost())) {
+                        injectNativeShareHook(view);
+                    }
+                } catch (Exception ignored) {
                 }
             }
 
@@ -190,6 +223,157 @@ public class MainActivity extends Activity {
                 runOnUiThread(request::deny);
             }
         });
+    }
+
+    private void injectNativeShareHook(WebView view) {
+        String js = "(function(){" +
+                "if(window.__vuNativeShareHook)return;window.__vuNativeShareHook=true;" +
+                "document.addEventListener('click',async function(e){" +
+                "var b=e.target&&e.target.closest?e.target.closest('button[data-act=\\\"share\\\"]'):null;" +
+                "if(!b||!window.VendaUnicaNative||typeof VendaUnicaNative.shareProduct!=='function')return;" +
+                "var p=(typeof products!=='undefined'?products:[]).find(function(x){return String(x.id)===String(b.dataset.id)});" +
+                "if(!p)return;" +
+                "e.preventDefault();e.stopImmediatePropagation();" +
+                "var old=b.textContent;b.disabled=true;b.textContent='Preparando foto…';" +
+                "try{" +
+                "if(!p.published&&typeof patchProduct==='function'){await patchProduct(p.id,{published:true});p.published=true;}" +
+                "var link='https://venda.pimata.app/p/'+encodeURIComponent(p.id);" +
+                "var fmt=(typeof money==='function')?money:function(v){return 'R$ '+Number(v||0).toFixed(2).replace('.',',')};" +
+                "var normal=fmt(p.price),finalp=fmt(p.sale_price!=null?p.sale_price:p.price);" +
+                "var text='*'+p.title+'*\\n\\n';" +
+                "text+=(p.sale_price!=null?'💵 De ~'+normal+'~\\n🔥 Por *'+finalp+'*\\n':'💵 *'+finalp+'*\\n');" +
+                "text+='\\n🔒 Pagamento integral pelo Mercado Pago\\n📦 Frete calculado no link\\n\\n👇 *Toque no link abaixo para comprar* 👇\\n'+link;" +
+                "var image=p.image_data_uri||p.image_url||'';" +
+                "VendaUnicaNative.shareProduct(image,text,p.title||'Venda Única');" +
+                "}catch(err){try{if(typeof notice==='function'&&typeof $==='function')notice($('#productsMsg'),'Não foi possível compartilhar: '+err.message,'error')}catch(_){} }" +
+                "setTimeout(function(){b.disabled=false;b.textContent=old},1500);" +
+                "},true);" +
+                "})();";
+        view.evaluateJavascript(js, null);
+    }
+
+    private class NativeBridge {
+        @JavascriptInterface
+        public void shareProduct(String imageSource, String text, String title) {
+            if (!biometricUnlocked) return;
+            final String source = imageSource == null ? "" : imageSource;
+            final String caption = text == null ? "" : text;
+            final String subject = title == null ? "Venda Única" : title;
+
+            new Thread(() -> {
+                Uri imageUri = null;
+                String error = null;
+                try {
+                    if (!source.isEmpty()) {
+                        imageUri = prepareShareImage(source);
+                    }
+                } catch (Exception e) {
+                    error = e.getMessage();
+                }
+
+                Uri finalImageUri = imageUri;
+                String finalError = error;
+                runOnUiThread(() -> {
+                    if (finalError != null) {
+                        Toast.makeText(MainActivity.this, "A foto não pôde ser preparada. Enviando o texto.", Toast.LENGTH_LONG).show();
+                    }
+                    openShareChooser(finalImageUri, caption, subject);
+                });
+            }).start();
+        }
+    }
+
+    private Uri prepareShareImage(String source) throws Exception {
+        byte[] bytes = readImageBytes(source);
+        if (bytes.length == 0) throw new IllegalArgumentException("Imagem vazia");
+
+        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        if (bitmap == null) throw new IllegalArgumentException("Formato de imagem inválido");
+
+        File dir = new File(getCacheDir(), "shared");
+        if (!dir.exists() && !dir.mkdirs()) {
+            bitmap.recycle();
+            throw new IllegalStateException("Não foi possível preparar a pasta temporária");
+        }
+
+        File file = new File(dir, "produto-" + System.currentTimeMillis() + ".jpg");
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out)) {
+                throw new IllegalStateException("Não foi possível converter a imagem");
+            }
+            out.flush();
+        } finally {
+            bitmap.recycle();
+        }
+
+        return FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
+    }
+
+    private byte[] readImageBytes(String source) throws Exception {
+        if (source.startsWith("data:")) {
+            int comma = source.indexOf(',');
+            if (comma < 0) throw new IllegalArgumentException("Imagem embutida inválida");
+            String meta = source.substring(0, comma);
+            String body = source.substring(comma + 1);
+            if (!meta.contains(";base64")) {
+                throw new IllegalArgumentException("Imagem embutida sem base64");
+            }
+            return Base64.decode(body, Base64.DEFAULT);
+        }
+
+        URL url = new URL(source);
+        if (!"https".equalsIgnoreCase(url.getProtocol())) {
+            throw new IllegalArgumentException("A imagem precisa usar HTTPS");
+        }
+
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setConnectTimeout(15000);
+        connection.setReadTimeout(20000);
+        connection.setInstanceFollowRedirects(true);
+        connection.setRequestProperty("User-Agent", "VendaUnicaAndroid/1.3.4");
+
+        try {
+            int code = connection.getResponseCode();
+            if (code < 200 || code >= 300) {
+                throw new IllegalStateException("Servidor da imagem retornou " + code);
+            }
+            try (InputStream in = connection.getInputStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[8192];
+                int read;
+                int total = 0;
+                while ((read = in.read(buffer)) != -1) {
+                    total += read;
+                    if (total > 15 * 1024 * 1024) {
+                        throw new IllegalArgumentException("Imagem maior que 15 MB");
+                    }
+                    out.write(buffer, 0, read);
+                }
+                return out.toByteArray();
+            }
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    private void openShareChooser(Uri imageUri, String text, String title) {
+        Intent send = new Intent(Intent.ACTION_SEND);
+        send.putExtra(Intent.EXTRA_TEXT, text);
+        send.putExtra(Intent.EXTRA_SUBJECT, title);
+
+        if (imageUri != null) {
+            send.setType("image/jpeg");
+            send.putExtra(Intent.EXTRA_STREAM, imageUri);
+            send.setClipData(ClipData.newRawUri("Foto do produto", imageUri));
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } else {
+            send.setType("text/plain");
+        }
+
+        try {
+            startActivity(Intent.createChooser(send, "Compartilhar anúncio"));
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "Nenhum aplicativo disponível para compartilhar.", Toast.LENGTH_LONG).show();
+        }
     }
 
     private boolean launchFileChooser(WebChromeClient.FileChooserParams params) {
@@ -345,6 +529,7 @@ public class MainActivity extends Activity {
             fileCallback = null;
         }
         if (webView != null) {
+            webView.removeJavascriptInterface("VendaUnicaNative");
             webView.stopLoading();
             webView.destroy();
         }
